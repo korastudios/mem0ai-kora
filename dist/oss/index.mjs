@@ -18121,11 +18121,11 @@ var Memory = class _Memory {
       }
       seenBatches.add(batchKey);
       for (const memory of batch) {
-        await this.deleteMemory(memory.id);
+        await this.forgetMemory(memory.id);
       }
       deletedCount += batch.length;
     }
-    const result = { message: "Memories deleted successfully!" };
+    const result = { message: "Memories forgotten successfully!" };
     if (deletedCount > 0) {
       await this._displayDecayUsageNotice({
         triggerFunction: "delete_all",
