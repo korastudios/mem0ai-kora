@@ -1106,19 +1106,13 @@ var _MemoryVectorStore = class _MemoryVectorStore {
     this.init();
   }
   async list(filters, topK = 100) {
-    const rows = this.db.prepare(`SELECT * FROM vectors`).all();
+    const rows = this.db.prepare(`SELECT id, payload FROM vectors`).all();
     const results = [];
     for (const row of rows) {
       const payload = this.normalizePayload(JSON.parse(row.payload));
       const memoryVector = {
         id: row.id,
-        vector: Array.from(
-          new Float32Array(
-            row.vector.buffer,
-            row.vector.byteOffset,
-            row.vector.byteLength / 4
-          )
-        ),
+        vector: [],
         payload
       };
       if (this.filterVector(memoryVector, filters)) {
@@ -18222,7 +18216,18 @@ var Memory = class _Memory {
     rejectTopLevelEntityParams(config, "getAll");
     validateSearchParams(void 0, config.topK);
     await this._ensureInitialized();
-    const { topK = 20, showExpired = false } = config;
+    const { topK = 20, showExpired = false, collection } = config;
+    if (collection) {
+      if (collection.order !== "updated_at_desc") {
+        throw new Error("collection.order must be updated_at_desc");
+      }
+      if (collection.contains !== void 0 && typeof collection.contains !== "string") {
+        throw new Error("collection.contains must be a string");
+      }
+      if (collection.after && (typeof collection.after.updatedAt !== "string" || typeof collection.after.id !== "string" || !collection.after.updatedAt || !collection.after.id)) {
+        throw new Error("collection.after requires non-empty updatedAt and id strings");
+      }
+    }
     const filters = Object.fromEntries(
       Object.entries({
         ...config.filters || {},
@@ -18242,10 +18247,28 @@ var Memory = class _Memory {
         "filters must contain at least one of: user_id, agent_id, run_id. Example: filters: { user_id: 'u1' }"
       );
     }
-    const fetchLimit = showExpired ? topK : Math.max(topK * 4, 60);
-    const [memories] = await this.vectorStore.list(filters, fetchLimit);
-    const visibleMemories = showExpired ? memories : memories.filter((mem) => !payloadIsExpired(mem.payload));
-    const results = visibleMemories.slice(0, topK).map((mem) => ({
+    const fetchLimit = showExpired || (collection == null ? void 0 : collection.onlyExpired) ? topK : Math.max(topK * 4, 60);
+    let [memories, storedTotal] = await this.vectorStore.list(filters, fetchLimit);
+    if (collection && memories.length < storedTotal) {
+      [memories] = await this.vectorStore.list(filters, storedTotal);
+    }
+    let visibleMemories = (collection == null ? void 0 : collection.onlyExpired) ? memories.filter((mem) => payloadIsExpired(mem.payload)) : showExpired ? memories : memories.filter((mem) => !payloadIsExpired(mem.payload));
+    if (collection) {
+      const contains = collection.contains == null ? "" : collection.contains.trim().toLocaleLowerCase();
+      if (contains) {
+        visibleMemories = visibleMemories.filter((mem) => String(mem.payload.data ?? "").toLocaleLowerCase().includes(contains));
+      }
+      visibleMemories.sort((left, right) => String(right.payload.updatedAt ?? right.payload.createdAt ?? "").localeCompare(String(left.payload.updatedAt ?? left.payload.createdAt ?? "")) || left.id.localeCompare(right.id));
+    }
+    const total = visibleMemories.length;
+    if (collection == null ? void 0 : collection.after) {
+      visibleMemories = visibleMemories.filter((mem) => {
+        const updatedAt = String(mem.payload.updatedAt ?? mem.payload.createdAt ?? "");
+        return updatedAt < collection.after.updatedAt || updatedAt === collection.after.updatedAt && mem.id > collection.after.id;
+      });
+    }
+    const pageMemories = visibleMemories.slice(0, topK);
+    const results = pageMemories.map((mem) => ({
       id: mem.id,
       memory: mem.payload.data,
       hash: mem.payload.hash,
@@ -18259,7 +18282,7 @@ var Memory = class _Memory {
         attributedTo: mem.payload.attributedTo
       }
     }));
-    const result = { results };
+    const result = collection ? { results, total, complete: visibleMemories.length <= topK } : { results };
     const scaleThresholdNotice = detectScaleThresholdFromTopK(topK);
     if (scaleThresholdNotice) {
       await this._displayScaleThresholdNotice({

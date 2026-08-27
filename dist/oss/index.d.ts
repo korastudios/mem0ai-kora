@@ -179,6 +179,10 @@ interface SearchFilters {
 }
 interface SearchResult {
     results: MemoryItem[];
+    /** Total visible records when collection paging is requested. */
+    total?: number;
+    /** Whether the requested collection page reaches the end. */
+    complete?: boolean;
 }
 interface VectorStoreResult {
     id: string;
@@ -639,6 +643,16 @@ interface GetAllMemoryOptions {
     filters?: SearchFilters;
     /** Include expired memories in the results. Defaults to false. */
     showExpired?: boolean;
+    /** Stable collection paging without exposing a vector-store implementation. */
+    collection?: {
+        order: "updated_at_desc";
+        after?: {
+            updatedAt: string;
+            id: string;
+        };
+        contains?: string;
+        onlyExpired?: boolean;
+    };
 }
 interface DeleteAllMemoryOptions extends Entity {
 }
