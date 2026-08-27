@@ -76,7 +76,8 @@ var MemoryConfigSchema = z.object({
     config: z.record(z.string(), z.any())
   }).optional(),
   disableHistory: z.boolean().optional(),
-  enableEntityMemory: z.boolean().optional()
+  enableEntityMemory: z.boolean().optional(),
+  enableMessageHistory: z.boolean().optional()
 });
 
 // src/oss/src/embeddings/openai.ts
@@ -14493,6 +14494,7 @@ var DummyHistoryManager = class {
 var DEFAULT_MEMORY_CONFIG = {
   disableHistory: false,
   enableEntityMemory: true,
+  enableMessageHistory: true,
   version: "v1.1",
   embedder: {
     provider: "openai",
@@ -14654,6 +14656,7 @@ var ConfigManager = class {
       })(),
       disableHistory: userConfig.disableHistory || DEFAULT_MEMORY_CONFIG.disableHistory,
       enableEntityMemory: userConfig.enableEntityMemory ?? DEFAULT_MEMORY_CONFIG.enableEntityMemory,
+      enableMessageHistory: userConfig.enableMessageHistory ?? DEFAULT_MEMORY_CONFIG.enableMessageHistory,
       reranker: userConfig.reranker
     };
     return MemoryConfigSchema.parse(mergedConfig);
@@ -17417,7 +17420,7 @@ var Memory = class _Memory {
     }
     const sessionScope = this.buildSessionScope(filters);
     let lastMessages = [];
-    if (typeof this.db.getLastMessages === "function") {
+    if (this.config.enableMessageHistory && typeof this.db.getLastMessages === "function") {
       try {
         lastMessages = await this.db.getLastMessages(sessionScope, 10);
       } catch (e) {
@@ -17483,7 +17486,7 @@ var Memory = class _Memory {
       extractedMemories = [];
     }
     if (extractedMemories.length === 0) {
-      if (typeof this.db.saveMessages === "function") {
+      if (this.config.enableMessageHistory && typeof this.db.saveMessages === "function") {
         try {
           await this.db.saveMessages(
             messages.map((m) => ({
@@ -17557,7 +17560,7 @@ var Memory = class _Memory {
       });
     }
     if (records.length === 0) {
-      if (typeof this.db.saveMessages === "function") {
+      if (this.config.enableMessageHistory && typeof this.db.saveMessages === "function") {
         try {
           await this.db.saveMessages(
             messages.map((m) => ({
@@ -17737,7 +17740,7 @@ var Memory = class _Memory {
     } catch (e) {
       console.warn(`Batch entity linking failed: ${e}`);
     }
-    if (typeof this.db.saveMessages === "function") {
+    if (this.config.enableMessageHistory && typeof this.db.saveMessages === "function") {
       try {
         await this.db.saveMessages(
           messages.map((m) => ({

@@ -10,7 +10,7 @@ This repository is a minimal package-level fork of `mem0ai@3.1.7`.
 
 ## Deliberate delta
 
-The fork adds three general public lifecycle controls that Kora requires:
+The fork adds six general public controls that Kora requires:
 
 1. `MemoryConfig.enableEntityMemory`, defaulting to `true` for upstream
    compatibility. When `false`, add, search, update, and delete do not create
@@ -28,6 +28,10 @@ The fork adds three general public lifecycle controls that Kora requires:
    implements Mem0's exported `LLM` contract. This lets an application reuse
    its authenticated model transport without an OpenAI-compatible proxy or an
    additional provider credential.
+6. `MemoryConfig.enableMessageHistory`, defaulting to `true` for upstream
+   compatibility. When `false`, inferred adds neither read nor duplicate
+   conversation messages into the history provider; extraction uses only the
+   messages supplied to that add.
 
 The custom provider validates both required `LLM` methods before returning the
 client. The in-memory SQLite vector store now exposes `close()` so the top-level

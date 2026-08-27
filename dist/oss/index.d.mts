@@ -155,6 +155,7 @@ interface MemoryConfig {
     historyStore?: HistoryStoreConfig;
     disableHistory?: boolean;
     enableEntityMemory?: boolean;
+    enableMessageHistory?: boolean;
     historyDbPath?: string;
     customInstructions?: string;
 }
@@ -448,6 +449,7 @@ declare const MemoryConfigSchema: z.ZodObject<{
     }>>;
     disableHistory: z.ZodOptional<z.ZodBoolean>;
     enableEntityMemory: z.ZodOptional<z.ZodBoolean>;
+    enableMessageHistory: z.ZodOptional<z.ZodBoolean>;
 }, "strip", z.ZodTypeAny, {
     llm: {
         provider: string;
@@ -518,6 +520,7 @@ declare const MemoryConfigSchema: z.ZodObject<{
     } | undefined;
     disableHistory?: boolean | undefined;
     enableEntityMemory?: boolean | undefined;
+    enableMessageHistory?: boolean | undefined;
 }, {
     llm: {
         provider: string;
@@ -588,6 +591,7 @@ declare const MemoryConfigSchema: z.ZodObject<{
     } | undefined;
     disableHistory?: boolean | undefined;
     enableEntityMemory?: boolean | undefined;
+    enableMessageHistory?: boolean | undefined;
 }>;
 
 interface Entity {
