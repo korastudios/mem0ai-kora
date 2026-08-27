@@ -18367,7 +18367,7 @@ var Memory = class _Memory {
       memory: mem.payload.data,
       hash: mem.payload.hash,
       createdAt: mem.payload.createdAt,
-      updatedAt: mem.payload.updatedAt,
+      updatedAt: mem.payload.updatedAt ?? mem.payload.createdAt,
       metadata: Object.entries(mem.payload).filter(([key]) => !PAYLOAD_METADATA_EXCLUDED_KEYS.has(key)).reduce((acc, [key, value]) => ({ ...acc, [key]: value }), {}),
       ...mem.payload.user_id && { user_id: mem.payload.user_id },
       ...mem.payload.agent_id && { agent_id: mem.payload.agent_id },
