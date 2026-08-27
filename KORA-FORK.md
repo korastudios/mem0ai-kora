@@ -24,8 +24,13 @@ The fork adds three general public lifecycle controls that Kora requires:
 4. `Memory.deleteAll(scope)` applies the same irreversible forgetting
    semantics to every Memory in the requested scope. Ordinary single-record
    `delete` retains upstream history behavior.
+5. `LLMFactory` accepts a `custom` provider whose public `config.client`
+   implements Mem0's exported `LLM` contract. This lets an application reuse
+   its authenticated model transport without an OpenAI-compatible proxy or an
+   additional provider credential.
 
-The in-memory SQLite vector store now exposes `close()` so the top-level
+The custom provider validates both required `LLM` methods before returning the
+client. The in-memory SQLite vector store now exposes `close()` so the top-level
 lifecycle contract can release that owned connection. History providers expose
 the internal erase operation consumed by the public `forget` method. No
 extraction, embedding, search, ordinary single-record delete/history, expiration, provider,

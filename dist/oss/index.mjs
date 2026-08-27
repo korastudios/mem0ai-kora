@@ -14311,6 +14311,17 @@ var LLMFactory = class {
         return new TogetherLLM(config);
       case "vllm":
         return new VllmLLM(config);
+      case "custom":
+        if (
+          !config.client ||
+          typeof config.client.generateResponse !== "function" ||
+          typeof config.client.generateChat !== "function"
+        ) {
+          throw new Error(
+            "Custom LLM provider requires config.client implementing generateResponse() and generateChat()",
+          );
+        }
+        return config.client;
       default:
         throw new Error(`Unsupported LLM provider: ${provider}`);
     }
