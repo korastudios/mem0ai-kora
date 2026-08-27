@@ -21,11 +21,14 @@ The fork adds three general public lifecycle controls that Kora requires:
 3. `Memory.forget(memoryId)`, which idempotently erases the serving vector,
    entity links, and all history rows for one memory. Unlike `delete`, it
    intentionally retains no reconstructable deletion history.
+4. `Memory.deleteAll(scope)` applies the same irreversible forgetting
+   semantics to every Memory in the requested scope. Ordinary single-record
+   `delete` retains upstream history behavior.
 
 The in-memory SQLite vector store now exposes `close()` so the top-level
 lifecycle contract can release that owned connection. History providers expose
 the internal erase operation consumed by the public `forget` method. No
-extraction, embedding, search, ordinary delete/history, expiration, provider,
+extraction, embedding, search, ordinary single-record delete/history, expiration, provider,
 or scoring behavior is otherwise changed.
 
 The package is generated upstream output. Source maps were removed because
