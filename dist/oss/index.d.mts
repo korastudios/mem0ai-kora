@@ -724,6 +724,9 @@ declare class Memory {
     delete(memoryId: string): Promise<{
         message: string;
     }>;
+    forget(memoryId: string): Promise<{
+        message: string;
+    }>;
     deleteAll(config: DeleteAllMemoryOptions): Promise<{
         message: string;
     }>;
@@ -734,6 +737,7 @@ declare class Memory {
     private createMemory;
     private updateMemory;
     private deleteMemory;
+    private forgetMemory;
     /**
      * Check if filters contain advanced operators that need special processing.
      */

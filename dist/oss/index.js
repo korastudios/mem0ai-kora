@@ -4997,6 +4997,9 @@ var SQLiteManager = class {
   async getHistory(memoryId) {
     return this.stmtSelect.all(memoryId);
   }
+  async deleteHistory(memoryId) {
+    this.db.prepare("DELETE FROM memory_history WHERE memory_id = ?").run(memoryId);
+  }
   async saveMessages(messages, sessionScope) {
     if (!messages.length) return;
     const insertMsg = this.db.prepare(
@@ -5095,6 +5098,11 @@ var MemoryHistoryManager = class {
       (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
     ).slice(0, 100);
   }
+  async deleteHistory(memoryId) {
+    for (const [id, entry] of this.memoryStore) {
+      if (entry.memory_id === memoryId) this.memoryStore.delete(id);
+    }
+  }
   async reset() {
     this.memoryStore.clear();
   }
@@ -5169,6 +5177,14 @@ create table ${this.tableName} (
       throw error;
     }
     return data || [];
+  }
+  async deleteHistory(memoryId) {
+    await this.ensureClient();
+    const { error } = await this.supabase.from(this.tableName).delete().eq("memory_id", memoryId);
+    if (error) {
+      console.error("Error deleting history from Supabase:", error);
+      throw error;
+    }
   }
   async reset() {
     await this.ensureClient();
@@ -14545,6 +14561,9 @@ var DummyHistoryManager = class {
   async getHistory(memoryId) {
     return [];
   }
+  async deleteHistory(memoryId) {
+    return;
+  }
   async reset() {
     return;
   }
@@ -18154,6 +18173,12 @@ var Memory = class _Memory {
     }
     return result;
   }
+  async forget(memoryId) {
+    await this._ensureInitialized();
+    await this._captureEvent("forget", { memory_id: memoryId });
+    await this.forgetMemory(memoryId);
+    return { message: "Memory forgotten successfully!" };
+  }
   async deleteAll(config) {
     await this._ensureInitialized();
     await this._captureEvent("delete_all", {
@@ -18420,6 +18445,22 @@ var Memory = class _Memory {
     } catch (e) {
       console.warn(`Entity store cleanup failed during delete: ${e}`);
     }
+    return memoryId;
+  }
+  async forgetMemory(memoryId) {
+    const existingMemory = await this.vectorStore.get(memoryId);
+    if (existingMemory) {
+      const sessionFilters = this._sessionFiltersFromPayload(
+        existingMemory.payload || {}
+      );
+      await this.vectorStore.delete(memoryId);
+      try {
+        await this._removeMemoryFromEntityStore(memoryId, sessionFilters);
+      } catch (e) {
+        console.warn(`Entity store cleanup failed during forget: ${e}`);
+      }
+    }
+    await this.db.deleteHistory(memoryId);
     return memoryId;
   }
   /**

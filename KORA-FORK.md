@@ -10,7 +10,7 @@ This repository is a minimal package-level fork of `mem0ai@3.1.7`.
 
 ## Deliberate delta
 
-The fork adds two general public lifecycle controls that Kora requires:
+The fork adds three general public lifecycle controls that Kora requires:
 
 1. `MemoryConfig.enableEntityMemory`, defaulting to `true` for upstream
    compatibility. When `false`, add, search, update, and delete do not create
@@ -18,11 +18,15 @@ The fork adds two general public lifecycle controls that Kora requires:
 2. `Memory.close()`, which deterministically closes the initialized entity,
    vector, and history stores once each and reports the first cleanup error
    after attempting every owned resource.
+3. `Memory.forget(memoryId)`, which idempotently erases the serving vector,
+   entity links, and all history rows for one memory. Unlike `delete`, it
+   intentionally retains no reconstructable deletion history.
 
 The in-memory SQLite vector store now exposes `close()` so the top-level
-lifecycle contract can release that owned connection. No extraction,
-embedding, search, CRUD, history, expiration, provider, or scoring behavior is
-otherwise changed.
+lifecycle contract can release that owned connection. History providers expose
+the internal erase operation consumed by the public `forget` method. No
+extraction, embedding, search, ordinary delete/history, expiration, provider,
+or scoring behavior is otherwise changed.
 
 The package is generated upstream output. Source maps were removed because
 their upstream mappings would be stale after this reviewed package-level
